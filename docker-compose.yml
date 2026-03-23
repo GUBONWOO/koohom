@@ -1,0 +1,34 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: sumo_db
+      POSTGRES_USER: gubonwoo
+      POSTGRES_PASSWORD: **REMOVED**
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    # 외부에서 직접 접근이 필요하면 포트 오픈
+    # ports:
+    #   - "5432:5432"
+
+  server:
+    build: ./server
+    restart: unless-stopped
+    env_file:
+      - ./server/.env
+    environment:
+      DB_HOST: postgres
+    depends_on:
+      - postgres
+
+  client:
+    build: ./client
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - server
+
+volumes:
+  postgres_data:
