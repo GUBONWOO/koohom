@@ -72,6 +72,13 @@ const parsePage = ($) => {
     const href = $(unit).find(`a[href*="ikkodate"]`).first().attr('href') || '';
     const url  = href.startsWith('http') ? href : BASE_URL + href;
 
+    // 이미지 URL 추출 (data-src 우선, 없으면 src)
+    const imgEl = $(unit).find('img').first();
+    const rawImg = imgEl.attr('data-src') || imgEl.attr('src') || '';
+    const imageUrl = rawImg.startsWith('http') ? rawImg
+                   : rawImg ? BASE_URL + rawImg
+                   : null;
+
     // 5000만엔 이하 필터
     if (price && parsePrice(price) <= 5000) {
       items.push({
@@ -84,6 +91,7 @@ const parsePage = ($) => {
         layout:        layout || null,
         year_built:    null,
         suumo_url:     url || null,
+        image_url:     imageUrl,
       });
     }
   });
@@ -151,20 +159,21 @@ const saveProperties = async (items, lineName) => {
       if (exists.rows.length === 0) {
         await client.query(
           `INSERT INTO properties
-            (name, price, address, transport, land_area, building_area, layout, year_built, line_name, suumo_url)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+            (name, price, address, transport, land_area, building_area, layout, year_built, line_name, suumo_url, image_url)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
           [item.name, item.price, item.address, item.transport,
            item.land_area, item.building_area, item.layout,
-           item.year_built, lineName, item.suumo_url]
+           item.year_built, lineName, item.suumo_url, item.image_url || null]
         );
         saved++;
       } else {
         await client.query(
           `UPDATE properties SET price=$1, address=$2, transport=$3,
-            land_area=$4, building_area=$5, layout=$6, crawled_at=NOW()
-           WHERE suumo_url=$7`,
+            land_area=$4, building_area=$5, layout=$6, image_url=$7, crawled_at=NOW()
+           WHERE suumo_url=$8`,
           [item.price, item.address, item.transport,
-           item.land_area, item.building_area, item.layout, item.suumo_url]
+           item.land_area, item.building_area, item.layout,
+           item.image_url || null, item.suumo_url]
         );
         updated++;
       }

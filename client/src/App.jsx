@@ -243,9 +243,21 @@ export default function App() {
 function PropertyCard({ property: p }) {
   return (
     <div className="card">
-      {/* 이미지 플레이스홀더 */}
+      {/* 이미지 */}
       <div className="card-image">
-        <div className="image-placeholder">
+        {p.image_url ? (
+          <img
+            className="card-img"
+            src={p.image_url}
+            alt={p.name || '物件写真'}
+            loading="lazy"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+              e.currentTarget.nextSibling.style.display = 'flex';
+            }}
+          />
+        ) : null}
+        <div className="image-placeholder" style={p.image_url ? { display: 'none' } : {}}>
           <span className="image-placeholder-icon">🏠</span>
           <span className="image-placeholder-text">外観写真なし</span>
         </div>

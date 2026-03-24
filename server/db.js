@@ -23,9 +23,14 @@ const initDB = async () => {
       year_built VARCHAR(100),
       line_name VARCHAR(100),
       suumo_url TEXT,
+      image_url TEXT,
       crawled_at TIMESTAMP DEFAULT NOW(),
       UNIQUE(suumo_url)
     );
+  `);
+  // 기존 테이블에 컬럼이 없으면 추가
+  await pool.query(`
+    ALTER TABLE properties ADD COLUMN IF NOT EXISTS image_url TEXT;
   `);
   console.log('DB 초기화 완료');
 };
