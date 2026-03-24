@@ -2,11 +2,42 @@ import { useState, useEffect, useCallback } from 'react';
 import { getProperties, getStats, getLines } from './api';
 import './App.css';
 
+const WALK_OPTIONS = [
+  { label: 'すべて', max: undefined },
+  { label: '5分以内',  max: 5 },
+  { label: '10分以内', max: 10 },
+  { label: '15分以内', max: 15 },
+  { label: '20分以内', max: 20 },
+  { label: '30分以内', max: 30 },
+];
+
+const PRICE_OPTIONS = [
+  { label: 'すべて', min: undefined, max: undefined },
+  { label: '〜2000万', min: undefined, max: 2000 },
+  { label: '2000〜3000万', min: 2000, max: 3000 },
+  { label: '3000〜4000万', min: 3000, max: 4000 },
+  { label: '4000〜5000万', min: 4000, max: 5000 },
+  { label: '5000万〜', min: 5000, max: undefined },
+];
+
+const YEAR_OPTIONS = [
+  { label: 'すべて', from: undefined },
+  { label: '2020年〜', from: 2020 },
+  { label: '2015年〜', from: 2015 },
+  { label: '2010年〜', from: 2010 },
+  { label: '2005年〜', from: 2005 },
+  { label: '2000年〜', from: 2000 },
+  { label: '1998年〜', from: 1998 },
+];
+
 export default function App() {
   const [properties, setProperties] = useState([]);
   const [stats, setStats]           = useState(null);
   const [lines, setLines]           = useState([]);
   const [selectedLine, setSelectedLine] = useState('');
+  const [priceIdx, setPriceIdx]     = useState(0);
+  const [yearIdx, setYearIdx]       = useState(0);
+  const [walkIdx, setWalkIdx]       = useState(0);
   const [page, setPage]             = useState(1);
   const [total, setTotal]           = useState(0);
   const [loading, setLoading]       = useState(false);
@@ -15,32 +46,41 @@ export default function App() {
 
   const fetchProperties = useCallback(async () => {
     setLoading(true);
+    const price = PRICE_OPTIONS[priceIdx];
+    const year  = YEAR_OPTIONS[yearIdx];
+    const walk  = WALK_OPTIONS[walkIdx];
     try {
-      const res = await getProperties({ line: selectedLine || undefined, page, limit: LIMIT });
+      const res = await getProperties({
+        line:     selectedLine || undefined,
+        priceMin: price.min,
+        priceMax: price.max,
+        yearFrom: year.from,
+        walkMax:  walk.max,
+        page,
+        limit: LIMIT,
+      });
       setProperties(res.data.data);
       setTotal(res.data.total);
     } catch {
-      setMessage('매물 조회 실패');
+      /* ignore */
     } finally {
       setLoading(false);
     }
-  }, [selectedLine, page]);
-
-  const fetchStats = async () => {
-    try {
-      const res = await getStats();
-      setStats(res.data);
-    } catch {}
-  };
+  }, [selectedLine, priceIdx, yearIdx, walkIdx, page]);
 
   useEffect(() => {
     getLines().then((r) => setLines(r.data));
-    fetchStats();
+    getStats().then((r) => setStats(r.data)).catch(() => {});
   }, []);
 
   useEffect(() => {
     fetchProperties();
   }, [fetchProperties]);
+
+  const handleFilter = (setter) => (val) => {
+    setter(val);
+    setPage(1);
+  };
 
   const totalPages = Math.ceil(total / LIMIT);
 
@@ -58,17 +98,17 @@ export default function App() {
         <div className="header-inner">
           <div className="logo-area">
             <div className="logo">
-              <span className="logo-s">S</span>
-              <span className="logo-uumo">UUMO</span>
+              <span className="logo-s">K</span>
+              <span className="logo-uumo">OOMO</span>
             </div>
-            <div className="logo-sub">埼玉県 一戸建て・土地</div>
+            <div className="logo-sub">埼玉県 一戸建て</div>
           </div>
           <div className="header-desc">
             <span className="line-tag">埼京線</span>
             <span className="line-tag">京浜東北線</span>
             <span className="line-tag">副都心線</span>
             <span className="line-tag">有楽町線</span>
-            <span className="price-tag">5,000万円以下</span>
+            <span className="line-tag">徒歩30分以内</span>
           </div>
         </div>
       </header>
@@ -85,7 +125,7 @@ export default function App() {
               <div className="stats-list">
                 <div
                   className={`stats-item ${!selectedLine ? 'active' : ''}`}
-                  onClick={() => { setSelectedLine(''); setPage(1); }}
+                  onClick={() => handleFilter(setSelectedLine)('')}
                 >
                   <span className="stats-line-name">全路線</span>
                   <span className="stats-count">{stats.total.toLocaleString()}件</span>
@@ -94,7 +134,7 @@ export default function App() {
                   <div
                     key={s.line_name}
                     className={`stats-item ${selectedLine === s.line_name ? 'active' : ''}`}
-                    onClick={() => { setSelectedLine(s.line_name); setPage(1); }}
+                    onClick={() => handleFilter(setSelectedLine)(s.line_name)}
                   >
                     <span className="stats-line-name">{s.line_name}</span>
                     <span className="stats-count">{parseInt(s.count).toLocaleString()}件</span>
@@ -107,6 +147,52 @@ export default function App() {
 
         {/* 메인 컨텐츠 */}
         <main className="main-content">
+          {/* 필터 바 */}
+          <div className="filter-bar">
+            <div className="filter-group">
+              <span className="filter-group-label">価格</span>
+              <div className="filter-chips">
+                {PRICE_OPTIONS.map((opt, i) => (
+                  <button
+                    key={i}
+                    className={`filter-chip ${priceIdx === i ? 'active' : ''}`}
+                    onClick={() => handleFilter(setPriceIdx)(i)}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="filter-group">
+              <span className="filter-group-label">徒歩</span>
+              <div className="filter-chips">
+                {WALK_OPTIONS.map((opt, i) => (
+                  <button
+                    key={i}
+                    className={`filter-chip ${walkIdx === i ? 'active' : ''}`}
+                    onClick={() => handleFilter(setWalkIdx)(i)}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="filter-group">
+              <span className="filter-group-label">築年数</span>
+              <div className="filter-chips">
+                {YEAR_OPTIONS.map((opt, i) => (
+                  <button
+                    key={i}
+                    className={`filter-chip ${yearIdx === i ? 'active' : ''}`}
+                    onClick={() => handleFilter(setYearIdx)(i)}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
           {/* 결과 헤더 */}
           <div className="result-header">
             <div className="result-count">
@@ -118,7 +204,7 @@ export default function App() {
               <select
                 className="line-select"
                 value={selectedLine}
-                onChange={(e) => { setSelectedLine(e.target.value); setPage(1); }}
+                onChange={(e) => handleFilter(setSelectedLine)(e.target.value)}
               >
                 <option value="">全路線</option>
                 {lines.map((line) => (
@@ -138,7 +224,7 @@ export default function App() {
             <div className="empty-state">
               <div className="empty-icon">🏚️</div>
               <p className="empty-title">物件が見つかりません</p>
-              <p className="empty-desc">クロールを実行してデータを取得してください</p>
+              <p className="empty-desc">条件を変更してください</p>
             </div>
           ) : (
             <div className="property-list">
@@ -247,7 +333,7 @@ function PropertyCard({ property: p }) {
             <div className="spec-sep" />
             <div className="spec-item">
               <span className="spec-label">築年月</span>
-              <span className="spec-value">{p.year_built || '-'}</span>
+              <span className="spec-value">{p.year_built ? `${p.year_built}年` : '-'}</span>
             </div>
           </div>
         </div>

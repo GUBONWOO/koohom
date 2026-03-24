@@ -271,6 +271,50 @@ body {
   min-width: 0;
 }
 
+/* 필터 바 */
+.filter-bar {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.filter-group-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  min-width: 44px;
+  white-space: nowrap;
+}
+.filter-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.filter-chip {
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--white);
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.filter-chip:hover { border-color: var(--suumo-green); color: var(--suumo-green); }
+.filter-chip.active {
+  background: var(--suumo-green);
+  border-color: var(--suumo-green);
+  color: var(--white);
+  font-weight: 600;
+}
+
 /* 결과 헤더 */
 .result-header {
   background: var(--white);

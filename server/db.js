@@ -29,9 +29,9 @@ const initDB = async () => {
     );
   `);
   // 기존 테이블에 컬럼이 없으면 추가
-  await pool.query(`
-    ALTER TABLE properties ADD COLUMN IF NOT EXISTS image_url TEXT;
-  `);
+  await pool.query(`ALTER TABLE properties ADD COLUMN IF NOT EXISTS image_url TEXT;`);
+  await pool.query(`ALTER TABLE properties ADD COLUMN IF NOT EXISTS price_num INTEGER;`);
+  await pool.query(`ALTER TABLE properties ADD COLUMN IF NOT EXISTS walk_min INTEGER;`);
   console.log('DB 초기화 완료');
 };
 

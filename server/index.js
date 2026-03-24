@@ -14,16 +14,20 @@ app.use(express.json());
 // GET /api/properties?line=埼京線&page=1&limit=20
 app.get('/api/properties', async (req, res) => {
   try {
-    const { line, page = 1, limit = 20 } = req.query;
+    const { line, page = 1, limit = 20, priceMin, priceMax, yearFrom, yearTo, walkMax } = req.query;
     const offset = (page - 1) * limit;
 
-    let whereClause = '';
+    const conditions = [];
     const params = [];
 
-    if (line) {
-      params.push(line);
-      whereClause = `WHERE line_name = $${params.length}`;
-    }
+    if (line)     { params.push(line);              conditions.push(`line_name = $${params.length}`); }
+    if (priceMin) { params.push(parseInt(priceMin)); conditions.push(`price_num >= $${params.length}`); }
+    if (priceMax) { params.push(parseInt(priceMax)); conditions.push(`price_num <= $${params.length}`); }
+    if (yearFrom) { params.push(parseInt(yearFrom)); conditions.push(`CAST(year_built AS INTEGER) >= $${params.length}`); }
+    if (yearTo)   { params.push(parseInt(yearTo));   conditions.push(`CAST(year_built AS INTEGER) <= $${params.length}`); }
+    if (walkMax)  { params.push(parseInt(walkMax));  conditions.push(`walk_min <= $${params.length}`); }
+
+    const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
     const countResult = await pool.query(
       `SELECT COUNT(*) FROM properties ${whereClause}`,
