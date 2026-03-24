@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getProperties, getStats, getLines, startCrawl } from './api';
+import { getProperties, getStats, getLines } from './api';
 import './App.css';
 
 export default function App() {
@@ -10,8 +10,6 @@ export default function App() {
   const [page, setPage]             = useState(1);
   const [total, setTotal]           = useState(0);
   const [loading, setLoading]       = useState(false);
-  const [crawling, setCrawling]     = useState(false);
-  const [message, setMessage]       = useState('');
 
   const LIMIT = 20;
 
@@ -43,20 +41,6 @@ export default function App() {
   useEffect(() => {
     fetchProperties();
   }, [fetchProperties]);
-
-  const handleCrawl = async (line) => {
-    setCrawling(true);
-    setMessage('');
-    try {
-      await startCrawl(line);
-      setMessage(`クロール開始: ${line || '全路線'} (バックグラウンドで実行中...)`);
-      setTimeout(() => { fetchStats(); fetchProperties(); }, 5000);
-    } catch {
-      setMessage('크롤링 요청 실패');
-    } finally {
-      setCrawling(false);
-    }
-  };
 
   const totalPages = Math.ceil(total / LIMIT);
 
@@ -92,42 +76,6 @@ export default function App() {
       <div className="main-wrap">
         {/* 사이드바 */}
         <aside className="sidebar">
-          <div className="sidebar-section">
-            <div className="sidebar-title">
-              <span className="sidebar-title-icon">🔄</span>
-              データ更新
-            </div>
-            <button
-              className="btn btn-crawl-all"
-              onClick={() => handleCrawl(null)}
-              disabled={crawling}
-            >
-              {crawling ? (
-                <span className="loading-dots">クロール中<span>...</span></span>
-              ) : (
-                '全路線クロール'
-              )}
-            </button>
-            <div className="line-crawl-list">
-              {lines.map((line) => (
-                <button
-                  key={line}
-                  className="btn btn-crawl-line"
-                  onClick={() => handleCrawl(line)}
-                  disabled={crawling}
-                >
-                  {line}
-                </button>
-              ))}
-            </div>
-            {message && (
-              <div className="crawl-message">
-                <span className="message-icon">ℹ️</span>
-                {message}
-              </div>
-            )}
-          </div>
-
           {stats && (
             <div className="sidebar-section">
               <div className="sidebar-title">
