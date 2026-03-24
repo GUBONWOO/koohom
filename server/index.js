@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const cron = require('node-cron');
 require('dotenv').config();
 
 const { initDB, pool } = require('./db');
@@ -119,4 +120,16 @@ const PORT = process.env.PORT || 5000;
   app.listen(PORT, () => {
     console.log(`서버 실행 중: http://localhost:${PORT}`);
   });
+
+  // 3시간마다 자동 크롤링 (0시, 3시, 6시, 9시... 정각)
+  cron.schedule('0 */3 * * *', async () => {
+    console.log(`[배치] 크롤링 시작: ${new Date().toISOString()}`);
+    try {
+      const summary = await runCrawler(null);
+      console.log('[배치] 크롤링 완료:', summary);
+    } catch (err) {
+      console.error('[배치] 크롤링 오류:', err.message);
+    }
+  });
+  console.log('[배치] 스케줄러 등록 완료 (3시간마다 실행)');
 })();

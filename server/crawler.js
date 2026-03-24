@@ -169,6 +169,18 @@ const saveProperties = async (items, lineName) => {
         updated++;
       }
     }
+    // 이번 크롤링에 없는 매물 삭제
+    const crawledUrls = items.map((i) => i.suumo_url).filter(Boolean);
+    let deleted = 0;
+    if (crawledUrls.length > 0) {
+      const placeholders = crawledUrls.map((_, i) => `$${i + 2}`).join(',');
+      const result = await client.query(
+        `DELETE FROM properties WHERE line_name = $1 AND suumo_url NOT IN (${placeholders})`,
+        [lineName, ...crawledUrls]
+      );
+      deleted = result.rowCount;
+    }
+
     await client.query('COMMIT');
   } catch (err) {
     await client.query('ROLLBACK');
@@ -177,7 +189,7 @@ const saveProperties = async (items, lineName) => {
     client.release();
   }
 
-  return { saved, updated };
+  return { saved, updated, deleted };
 };
 
 // 전체 실행
