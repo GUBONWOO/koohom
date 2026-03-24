@@ -72,11 +72,12 @@ const parsePage = ($) => {
     const href = $(unit).find(`a[href*="ikkodate"]`).first().attr('href') || '';
     const url  = href.startsWith('http') ? href : BASE_URL + href;
 
-    // 이미지 URL 추출 (data-src 우선, 없으면 src)
+    // 이미지 URL 추출 (rel > data-src > src 순서로 시도, SUUMO는 rel에 실제 URL 저장)
     const imgEl = $(unit).find('img').first();
-    const rawImg = imgEl.attr('data-src') || imgEl.attr('src') || '';
-    const imageUrl = rawImg.startsWith('http') ? rawImg
-                   : rawImg ? BASE_URL + rawImg
+    const rawImg = imgEl.attr('rel') || imgEl.attr('data-src') || imgEl.attr('src') || '';
+    const cleanImg = rawImg.replace(/&amp;/g, '&');
+    const imageUrl = cleanImg.startsWith('http') ? cleanImg
+                   : cleanImg ? BASE_URL + cleanImg
                    : null;
 
     // 5000만엔 이하 필터
@@ -145,6 +146,7 @@ const saveProperties = async (items, lineName) => {
   const client = await pool.connect();
   let saved = 0;
   let updated = 0;
+  let deleted = 0;
 
   try {
     await client.query('BEGIN');
@@ -180,7 +182,6 @@ const saveProperties = async (items, lineName) => {
     }
     // 이번 크롤링에 없는 매물 삭제
     const crawledUrls = items.map((i) => i.suumo_url).filter(Boolean);
-    let deleted = 0;
     if (crawledUrls.length > 0) {
       const placeholders = crawledUrls.map((_, i) => `$${i + 2}`).join(',');
       const result = await client.query(
