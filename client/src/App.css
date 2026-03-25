@@ -27,6 +27,11 @@
   padding: 0;
 }
 
+html, body, #root {
+  width: 100%;
+  min-height: 100vh;
+}
+
 body {
   font-family: 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif;
   background: var(--bg);
@@ -34,6 +39,13 @@ body {
   font-size: 14px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.app {
+  width: 100%;
 }
 
 /* ─── Top Nav ────────────────────────────────────────── */

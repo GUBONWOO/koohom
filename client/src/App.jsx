@@ -1,6 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getProperties, getStats, getLines } from './api';
+import { getProperties, getStats } from './api';
 import './App.css';
+
+const SORT_OPTIONS = [
+  { label: '新着順',           value: 'default' },
+  { label: '価格↑ 安い順',    value: 'price_asc' },
+  { label: '価格↓ 高い順',    value: 'price_desc' },
+  { label: '徒歩↑ 近い順',    value: 'walk_asc' },
+  { label: '徒歩↓ 遠い順',    value: 'walk_desc' },
+  { label: '築年数↑ 新しい順', value: 'year_desc' },
+  { label: '築年数↓ 古い順',  value: 'year_asc' },
+];
 
 const WALK_OPTIONS = [
   { label: 'すべて', max: undefined },
@@ -33,14 +43,14 @@ const YEAR_OPTIONS = [
 export default function App() {
   const [properties, setProperties] = useState([]);
   const [stats, setStats]           = useState(null);
-  const [lines, setLines]           = useState([]);
-  const [selectedLine, setSelectedLine] = useState('');
+const [selectedLine, setSelectedLine] = useState('');
   const [priceIdx, setPriceIdx]     = useState(0);
   const [yearIdx, setYearIdx]       = useState(0);
   const [walkIdx, setWalkIdx]       = useState(0);
   const [page, setPage]             = useState(1);
   const [total, setTotal]           = useState(0);
   const [loading, setLoading]       = useState(false);
+  const [sortBy, setSortBy]         = useState('default');
 
   const LIMIT = 20;
 
@@ -56,6 +66,7 @@ export default function App() {
         priceMax: price.max,
         yearFrom: year.from,
         walkMax:  walk.max,
+        sortBy:   sortBy !== 'default' ? sortBy : undefined,
         page,
         limit: LIMIT,
       });
@@ -66,11 +77,10 @@ export default function App() {
     } finally {
       setLoading(false);
     }
-  }, [selectedLine, priceIdx, yearIdx, walkIdx, page]);
+  }, [selectedLine, priceIdx, yearIdx, walkIdx, sortBy, page]);
 
   useEffect(() => {
-    getLines().then((r) => setLines(r.data));
-    getStats().then((r) => setStats(r.data)).catch(() => {});
+getStats().then((r) => setStats(r.data)).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -102,13 +112,6 @@ export default function App() {
               <span className="logo-uumo">OOMO</span>
             </div>
             <div className="logo-sub">埼玉県 一戸建て</div>
-          </div>
-          <div className="header-desc">
-            <span className="line-tag">埼京線</span>
-            <span className="line-tag">京浜東北線</span>
-            <span className="line-tag">副都心線</span>
-            <span className="line-tag">有楽町線</span>
-            <span className="line-tag">徒歩30分以内</span>
           </div>
         </div>
       </header>
@@ -201,14 +204,13 @@ export default function App() {
               <span className="result-unit">件</span>
             </div>
             <div className="filter-area">
-              <select
+<select
                 className="line-select"
-                value={selectedLine}
-                onChange={(e) => handleFilter(setSelectedLine)(e.target.value)}
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
               >
-                <option value="">全路線</option>
-                {lines.map((line) => (
-                  <option key={line} value={line}>{line}</option>
+                {SORT_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
               </select>
             </div>

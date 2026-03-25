@@ -12,10 +12,9 @@ const TARGET_LINES = [
   { name: '有楽町線',   slug: 'en_yurakuchosen' },
 ];
 
-// 신축 + 중고 URL 타입
+// 중고만
 const URL_TYPES = [
-  { type: 'shinchiku', path: 'ikkodate' },       // 新築一戸建て
-  { type: 'chuko',     path: 'chukoikkodate' },  // 中古一戸建て (cn=30: 築30年以内)
+  { type: 'chuko', path: 'chukoikkodate' },  // 中古一戸建て (cn=30: 築30年以内)
 ];
 
 const axiosInstance = axios.create({
@@ -78,14 +77,12 @@ const parsePage = ($, urlType) => {
     const bldArea   = get('建物面積');
     const yearText  = get('築年月'); // 중고만 존재
 
+    // 가격미정 제외
+    const priceNum = parsePrice(price || '');
+    if (!priceNum) return;
+
     // 도보 30분 이내 필터
     if (parseWalkMin(transport) > 30) return;
-
-    // 중고: 1998년 이후 필터
-    if (urlType === 'chuko') {
-      const year = parseYearBuilt(yearText);
-      if (!year || year < 1998) return;
-    }
 
     const href = $(unit).find('a[href*="ikkodate"], a[href*="chukoikkodate"]').first().attr('href') || '';
     const url  = href.startsWith('http') ? href : BASE_URL + href;
@@ -100,14 +97,14 @@ const parsePage = ($, urlType) => {
     items.push({
       name:          name || null,
       price,
-      price_num:     parsePrice(price || ''),
+      price_num:     priceNum,
       walk_min:      parseWalkMin(transport),
       address:       address || null,
       transport:     transport || null,
       land_area:     landArea || null,
       building_area: bldArea || null,
       layout:        layout || null,
-      year_built:    parseYearBuilt(yearText),
+      year_built:    parseYearBuilt(yearText) || null,
       property_type: urlType,
       suumo_url:     url || null,
       image_url:     imageUrl,
@@ -133,7 +130,6 @@ const crawlLineType = async (line, urlType) => {
   const buildUrl = (page) => {
     const base = `${BASE_URL}/${path}/saitama/${line.slug}/`;
     const params = new URLSearchParams({ pc: '30' });
-    if (type === 'chuko') params.set('cn', '30'); // 築30年以内로 SUUMO 서버 필터
     if (page > 1) params.set('page', String(page));
     return `${base}?${params.toString()}`;
   };

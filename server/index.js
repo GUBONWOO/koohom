@@ -14,7 +14,7 @@ app.use(express.json());
 // GET /api/properties?line=埼京線&page=1&limit=20
 app.get('/api/properties', async (req, res) => {
   try {
-    const { line, page = 1, limit = 20, priceMin, priceMax, yearFrom, yearTo, walkMax } = req.query;
+    const { line, page = 1, limit = 20, priceMin, priceMax, yearFrom, yearTo, walkMax, sortBy } = req.query;
     const offset = (page - 1) * limit;
 
     const conditions = [];
@@ -29,6 +29,17 @@ app.get('/api/properties', async (req, res) => {
 
     const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
+    // 정렬 (허용 목록으로 SQL injection 방지)
+    const SORT_MAP = {
+      price_asc:  `price_num ASC NULLS LAST`,
+      price_desc: `price_num DESC NULLS LAST`,
+      walk_asc:   `walk_min ASC NULLS LAST`,
+      walk_desc:  `walk_min DESC NULLS LAST`,
+      year_asc:   `CAST(year_built AS INTEGER) ASC NULLS LAST`,
+      year_desc:  `CAST(year_built AS INTEGER) DESC NULLS LAST`,
+    };
+    const orderClause = SORT_MAP[sortBy] || 'crawled_at DESC';
+
     const countResult = await pool.query(
       `SELECT COUNT(*) FROM properties ${whereClause}`,
       params
@@ -38,7 +49,7 @@ app.get('/api/properties', async (req, res) => {
     params.push(limit, offset);
     const result = await pool.query(
       `SELECT * FROM properties ${whereClause}
-       ORDER BY crawled_at DESC
+       ORDER BY ${orderClause}
        LIMIT $${params.length - 1} OFFSET $${params.length}`,
       params
     );
