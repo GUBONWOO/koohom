@@ -2,10 +2,12 @@ services:
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
-      POSTGRES_DB: sumo_db
-      POSTGRES_USER: gubonwoo
-      POSTGRES_PASSWORD: **REMOVED**
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     # 외부에서 직접 접근이 필요하면 포트 오픈
