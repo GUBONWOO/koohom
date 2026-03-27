@@ -32,6 +32,14 @@ const initDB = async () => {
   await pool.query(`ALTER TABLE properties ADD COLUMN IF NOT EXISTS image_url TEXT;`);
   await pool.query(`ALTER TABLE properties ADD COLUMN IF NOT EXISTS price_num INTEGER;`);
   await pool.query(`ALTER TABLE properties ADD COLUMN IF NOT EXISTS walk_min INTEGER;`);
+
+  // 인덱스 생성
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_properties_line_name  ON properties(line_name);`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_properties_price_num  ON properties(price_num);`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_properties_walk_min   ON properties(walk_min);`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_properties_year_built ON properties(year_built);`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_properties_crawled_at ON properties(crawled_at DESC);`);
+
   console.log('DB 초기화 완료');
 };
 
