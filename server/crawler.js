@@ -188,7 +188,7 @@ const saveProperties = async (items, lineName) => {
       } else {
         await client.query(
           `UPDATE properties SET price=$1, price_num=$2, walk_min=$3, address=$4, transport=$5,
-            land_area=$6, building_area=$7, layout=$8, year_built=$9, image_url=$10
+            land_area=$6, building_area=$7, layout=$8, year_built=$9, image_url=$10, crawled_at=NOW()
            WHERE suumo_url=$11`,
           [item.price, item.price_num, item.walk_min, item.address, item.transport,
            item.land_area, item.building_area, item.layout,
