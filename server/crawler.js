@@ -3,6 +3,11 @@ const cheerio = require('cheerio');
 const { pool } = require('./db');
 
 const BASE_URL = 'https://suumo.jp';
+const ITEMS_PER_PAGE = 30;
+const MAX_PAGES = 50;
+const CRAWL_DELAY_MS = 1500;
+const LINE_DELAY_MS = 2000;
+const MAX_WALK_MIN = 30;
 
 // 사이타마현 + 4개 노선
 const TARGET_LINES = [
@@ -19,9 +24,7 @@ const URL_TYPES = [
 
 const axiosInstance = axios.create({
   headers: {
-    'User-Agent':
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
-      '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     'Accept-Language': 'ja-JP,ja;q=0.9',
   },
   timeout: 15000,
@@ -81,8 +84,8 @@ const parsePage = ($, urlType) => {
     const priceNum = parsePrice(price || '');
     if (!priceNum) return;
 
-    // 도보 30분 이내 필터
-    if (parseWalkMin(transport) > 30) return;
+    // 도보 MAX_WALK_MIN분 이내 필터
+    if (parseWalkMin(transport) > MAX_WALK_MIN) return;
 
     const href = $(unit).find('a[href*="ikkodate"], a[href*="chukoikkodate"]').first().attr('href') || '';
     const url  = href.startsWith('http') ? href : BASE_URL + href;
@@ -118,7 +121,7 @@ const parsePage = ($, urlType) => {
 const getTotalPages = ($) => {
   const hitText = $('.pagination_set-hit').first().text().trim(); // "540件"
   const total   = parseInt(hitText.replace(/[^0-9]/g, ''), 10) || 0;
-  return Math.ceil(total / 30);
+  return Math.ceil(total / ITEMS_PER_PAGE);
 };
 
 // 한 노선 + 타입 크롤링
@@ -129,7 +132,7 @@ const crawlLineType = async (line, urlType) => {
 
   const buildUrl = (page) => {
     const base = `${BASE_URL}/${path}/saitama/${line.slug}/`;
-    const params = new URLSearchParams({ pc: '30' });
+    const params = new URLSearchParams({ pc: String(ITEMS_PER_PAGE) });
     if (page > 1) params.set('page', String(page));
     return `${base}?${params.toString()}`;
   };
@@ -137,13 +140,13 @@ const crawlLineType = async (line, urlType) => {
   const { data: firstData } = await axiosInstance.get(buildUrl(1));
   const $first = cheerio.load(firstData);
 
-  const totalPages = Math.min(getTotalPages($first), 50);
+  const totalPages = Math.min(getTotalPages($first), MAX_PAGES);
   const firstItems = parsePage($first, type);
   allItems.push(...firstItems);
   console.log(`  1/${totalPages}p → ${firstItems.length}건`);
 
   for (let page = 2; page <= totalPages; page++) {
-    await sleep(1500);
+    await sleep(CRAWL_DELAY_MS);
     const { data } = await axiosInstance.get(buildUrl(page));
     const $ = cheerio.load(data);
     const items = parsePage($, type);
@@ -185,7 +188,7 @@ const saveProperties = async (items, lineName) => {
       } else {
         await client.query(
           `UPDATE properties SET price=$1, price_num=$2, walk_min=$3, address=$4, transport=$5,
-            land_area=$6, building_area=$7, layout=$8, year_built=$9, image_url=$10, crawled_at=NOW()
+            land_area=$6, building_area=$7, layout=$8, year_built=$9, image_url=$10
            WHERE suumo_url=$11`,
           [item.price, item.price_num, item.walk_min, item.address, item.transport,
            item.land_area, item.building_area, item.layout,
@@ -232,7 +235,7 @@ const runCrawler = async (lineName = null) => {
       } catch (err) {
         console.error(`[${line.name}/${urlType.type}] 오류:`, err.message);
       }
-      await sleep(2000);
+      await sleep(LINE_DELAY_MS);
     }
 
     try {
