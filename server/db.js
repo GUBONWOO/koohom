@@ -24,7 +24,8 @@ const initDB = async () => {
       line_name VARCHAR(100),
       suumo_url TEXT,
       image_url TEXT,
-      crawled_at TIMESTAMP DEFAULT NOW(),
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW(),
       UNIQUE(suumo_url)
     );
   `);
@@ -32,13 +33,15 @@ const initDB = async () => {
   await pool.query(`ALTER TABLE properties ADD COLUMN IF NOT EXISTS image_url TEXT;`);
   await pool.query(`ALTER TABLE properties ADD COLUMN IF NOT EXISTS price_num INTEGER;`);
   await pool.query(`ALTER TABLE properties ADD COLUMN IF NOT EXISTS walk_min INTEGER;`);
+  await pool.query(`ALTER TABLE properties ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW();`);
+  await pool.query(`ALTER TABLE properties ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();`);
 
   // 인덱스 생성
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_properties_line_name  ON properties(line_name);`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_properties_price_num  ON properties(price_num);`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_properties_walk_min   ON properties(walk_min);`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_properties_year_built ON properties(year_built);`);
-  await pool.query(`CREATE INDEX IF NOT EXISTS idx_properties_crawled_at ON properties(crawled_at DESC);`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_properties_created_at ON properties(created_at DESC);`);
 
   console.log('DB 초기화 완료');
 };

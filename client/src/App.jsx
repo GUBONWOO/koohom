@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { getProperties, getStats } from './api';
 import PropertyCard from './PropertyCard';
 import FilterBar from './FilterBar';
@@ -16,6 +16,7 @@ export default function App() {
   const [walkIdx, setWalkIdx]       = useState(0);
   const [page, setPage]             = useState(1);
   const [total, setTotal]           = useState(0);
+  const isPageChange                = useRef(false);
   const [loading, setLoading]       = useState(false);
   const [sortBy, setSortBy]         = useState('default');
   const [darkMode, setDarkMode]     = useState(
@@ -32,18 +33,21 @@ export default function App() {
     const year  = YEAR_OPTIONS[yearIdx];
     const walk  = WALK_OPTIONS[walkIdx];
     try {
+      const skipCount = isPageChange.current;
       const res = await getProperties({
-        line:     selectedLine || undefined,
-        priceMin: price.min,
-        priceMax: price.max,
-        yearFrom: year.from,
-        walkMax:  walk.max,
-        sortBy:   sortBy !== 'default' ? sortBy : undefined,
+        line:      selectedLine || undefined,
+        priceMin:  price.min,
+        priceMax:  price.max,
+        yearFrom:  year.from,
+        walkMax:   walk.max,
+        sortBy:    sortBy !== 'default' ? sortBy : undefined,
         page,
-        limit: PAGE_LIMIT,
+        limit:     PAGE_LIMIT,
+        skipCount: skipCount ? 'true' : undefined,
       });
+      isPageChange.current = false;
       setProperties(res.data.data);
-      setTotal(res.data.total);
+      if (res.data.total !== null) setTotal(res.data.total);
     } catch {
       /* ignore */
     } finally {
@@ -59,7 +63,13 @@ export default function App() {
     fetchProperties();
   }, [fetchProperties]);
 
+  const handlePageChange = (p) => {
+    isPageChange.current = true;
+    setPage(p);
+  };
+
   const handleFilter = (setter) => (val) => {
+    isPageChange.current = false;
     setter(val);
     setPage(1);
   };
@@ -171,7 +181,7 @@ export default function App() {
           )}
 
           {totalPages > 1 && (
-            <Pagination page={page} totalPages={totalPages} onPage={setPage} />
+            <Pagination page={page} totalPages={totalPages} onPage={handlePageChange} />
           )}
         </main>
       </div>

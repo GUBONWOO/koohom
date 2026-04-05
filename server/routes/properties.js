@@ -15,7 +15,7 @@ const SORT_MAP = {
 // GET /api/properties
 router.get('/', async (req, res) => {
   try {
-    const { line, page = 1, limit = 20, priceMin, priceMax, yearFrom, yearTo, walkMax, sortBy } = req.query;
+    const { line, page = 1, limit = 20, priceMin, priceMax, yearFrom, yearTo, walkMax, sortBy, skipCount } = req.query;
     const offset = (page - 1) * limit;
 
     const conditions = [];
@@ -34,15 +34,28 @@ router.get('/', async (req, res) => {
     if (walkMax)  push(parseInt(walkMax),   'walk_min <= ?');
 
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
-    const order = SORT_MAP[sortBy] || 'crawled_at DESC';
+    const order = SORT_MAP[sortBy] || 'created_at DESC';
 
-    const { rows: [{ count }] } = await pool.query(`SELECT COUNT(*) FROM properties ${where}`, params);
+    const dataParams = [...params, limit, offset];
 
-    params.push(limit, offset);
-    const { rows } = await pool.query(
-      `SELECT * FROM properties ${where} ORDER BY ${order} LIMIT $${params.length - 1} OFFSET $${params.length}`,
-      params
+    const dataQuery = pool.query(
+      `SELECT * FROM properties ${where} ORDER BY ${order} LIMIT $${dataParams.length - 1} OFFSET $${dataParams.length}`,
+      dataParams
     );
+
+    let count;
+    if (skipCount === 'true') {
+      const { rows } = await dataQuery;
+      return res.json({ total: null, page: parseInt(page), limit: parseInt(limit), data: rows });
+    }
+
+    const [countResult, dataResult] = await Promise.all([
+      pool.query(`SELECT COUNT(*) FROM properties ${where}`, params),
+      dataQuery,
+    ]);
+
+    count = countResult.rows[0].count;
+    const { rows } = dataResult;
 
     res.json({ total: parseInt(count, 10), page: parseInt(page), limit: parseInt(limit), data: rows });
   } catch (err) {

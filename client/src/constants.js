@@ -18,12 +18,12 @@ export const WALK_OPTIONS = [
 ];
 
 export const PRICE_OPTIONS = [
-  { label: 'すべて',        min: undefined, max: undefined },
-  { label: '〜2000万',      min: undefined, max: 2000 },
-  { label: '2000〜3000万',  min: 2000,      max: 3000 },
-  { label: '3000〜4000万',  min: 3000,      max: 4000 },
-  { label: '4000〜5000万',  min: 4000,      max: 5000 },
-  { label: '5000万〜',      min: 5000,      max: undefined },
+  { label: 'すべて',      min: undefined, max: undefined },
+  { label: '2000万以下',  min: undefined, max: 2000 },
+  { label: '3000万以下',  min: undefined, max: 3000 },
+  { label: '4000万以下',  min: undefined, max: 4000 },
+  { label: '5000万以下',  min: undefined, max: 5000 },
+  { label: '5000万以上',  min: 5000,      max: undefined },
 ];
 
 export const YEAR_OPTIONS = [
