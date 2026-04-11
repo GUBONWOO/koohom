@@ -50,6 +50,15 @@ const parseWalkMin = (text) => {
   return Math.min(...matches.map((m) => parseInt(m[1], 10)));
 };
 
+// 특정 노선 기준 도보 시간 추출
+const parseWalkMinForLine = (transport, lineName) => {
+  if (!transport) return Infinity;
+  const idx = transport.indexOf(lineName);
+  if (idx === -1) return Infinity;
+  const m = transport.slice(idx).match(/徒歩\s*(\d+)\s*分/);
+  return m ? parseInt(m[1], 10) : Infinity;
+};
+
 // "2013年4月" → 연도 숫자 추출
 const parseYearBuilt = (text) => {
   const m = text.match(/(\d{4})\s*年/);
@@ -163,13 +172,20 @@ const crawlLineType = async (line, urlType) => {
 
   for (const area of line.areas) {
     const items = await crawlLineArea(line, urlType, area);
-    allItems.push(...items);
+    allItems.push(...items
+      .filter((item) => item.transport && item.transport.startsWith(line.name))
+      .map((item) => ({
+        ...item,
+        area,
+        walk_min: parseWalkMinForLine(item.transport, line.name),
+      }))
+      .filter((item) => item.walk_min <= MAX_WALK_MIN)
+    );
     await sleep(LINE_DELAY_MS);
   }
 
   console.log(`[${line.name}/${type}] 합계 ${allItems.length}건`);
-  // 지역 태깅
-  return allItems.map((item) => ({ ...item, area }));
+  return allItems;
 };
 
 // DB 저장

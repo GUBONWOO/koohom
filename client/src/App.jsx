@@ -18,6 +18,7 @@ export default function App() {
   const [page, setPage]             = useState(1);
   const [total, setTotal]           = useState(0);
   const isPageChange                = useRef(false);
+  const abortRef                    = useRef(null);
   const [loading, setLoading]       = useState(false);
   const [sortBy, setSortBy]         = useState('default');
   const [darkMode, setDarkMode]     = useState(
@@ -29,6 +30,10 @@ export default function App() {
   }, [darkMode]);
 
   const fetchProperties = useCallback(async () => {
+    if (abortRef.current) abortRef.current.abort();
+    abortRef.current = new AbortController();
+    const signal = abortRef.current.signal;
+
     setLoading(true);
     const area  = AREA_OPTIONS[areaIdx];
     const price = PRICE_OPTIONS[priceIdx];
@@ -47,12 +52,12 @@ export default function App() {
         page,
         limit:     PAGE_LIMIT,
         skipCount: skipCount ? 'true' : undefined,
-      });
+      }, signal);
       isPageChange.current = false;
       setProperties(res.data.data);
       if (res.data.total !== null) setTotal(res.data.total);
-    } catch {
-      /* ignore */
+    } catch (e) {
+      if (e.name !== 'CanceledError') console.error(e);
     } finally {
       setLoading(false);
     }
