@@ -11,10 +11,10 @@ const MAX_WALK_MIN = 30;
 
 // 사이타마현 + 4개 노선
 const TARGET_LINES = [
-  { name: '埼京線',     slug: 'en_saikyosen' },
+  { name: '埼京線',     slug: 'en_saikyosen',     area: null },  // 全線
   { name: '京浜東北線', slug: 'en_keihintohokusen' },
-  { name: '副都心線',   slug: 'en_fukutoshinsen' },
-  { name: '有楽町線',   slug: 'en_yurakuchosen' },
+  { name: '副都心線',   slug: 'en_fukutoshinsen', area: null },  // 全線
+  { name: '有楽町線',   slug: 'en_yurakuchosen',  area: null },  // 全線
 ];
 
 // 중고만
@@ -131,7 +131,8 @@ const crawlLineType = async (line, urlType) => {
   const allItems = [];
 
   const buildUrl = (page) => {
-    const base = `${BASE_URL}/${path}/saitama/${line.slug}/`;
+    const areaSegment = line.area === undefined ? 'saitama/' : (line.area ? `${line.area}/` : '');
+    const base = `${BASE_URL}/${path}/${areaSegment}${line.slug}/`;
     const params = new URLSearchParams({ pc: String(ITEMS_PER_PAGE) });
     if (page > 1) params.set('page', String(page));
     return `${base}?${params.toString()}`;
