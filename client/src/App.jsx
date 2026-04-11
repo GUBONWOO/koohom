@@ -4,13 +4,14 @@ import PropertyCard from './PropertyCard';
 import FilterBar from './FilterBar';
 import Pagination from './Pagination';
 import { IconChart, IconMoon, IconSun, IconHome } from './icons';
-import { SORT_OPTIONS, PRICE_OPTIONS, YEAR_OPTIONS, WALK_OPTIONS, PAGE_LIMIT } from './constants';
+import { SORT_OPTIONS, PRICE_OPTIONS, YEAR_OPTIONS, WALK_OPTIONS, AREA_OPTIONS, PAGE_LIMIT } from './constants';
 import './App.css';
 
 export default function App() {
   const [properties, setProperties] = useState([]);
   const [stats, setStats]           = useState(null);
   const [selectedLine, setSelectedLine] = useState('');
+  const [areaIdx, setAreaIdx]       = useState(0);
   const [priceIdx, setPriceIdx]     = useState(0);
   const [yearIdx, setYearIdx]       = useState(0);
   const [walkIdx, setWalkIdx]       = useState(0);
@@ -29,6 +30,7 @@ export default function App() {
 
   const fetchProperties = useCallback(async () => {
     setLoading(true);
+    const area  = AREA_OPTIONS[areaIdx];
     const price = PRICE_OPTIONS[priceIdx];
     const year  = YEAR_OPTIONS[yearIdx];
     const walk  = WALK_OPTIONS[walkIdx];
@@ -36,6 +38,7 @@ export default function App() {
       const skipCount = isPageChange.current;
       const res = await getProperties({
         line:      selectedLine || undefined,
+        area:      area.value,
         priceMin:  price.min,
         priceMax:  price.max,
         yearFrom:  year.from,
@@ -53,7 +56,7 @@ export default function App() {
     } finally {
       setLoading(false);
     }
-  }, [selectedLine, priceIdx, yearIdx, walkIdx, sortBy, page]);
+  }, [selectedLine, areaIdx, priceIdx, yearIdx, walkIdx, sortBy, page]);
 
   useEffect(() => {
     getStats().then((r) => setStats(r.data)).catch(() => {});
@@ -137,6 +140,7 @@ export default function App() {
 
         <main className="main-content">
           <FilterBar
+            areaIdx={areaIdx}    onArea={handleFilter(setAreaIdx)}
             priceIdx={priceIdx}  onPrice={handleFilter(setPriceIdx)}
             walkIdx={walkIdx}    onWalk={handleFilter(setWalkIdx)}
             yearIdx={yearIdx}    onYear={handleFilter(setYearIdx)}

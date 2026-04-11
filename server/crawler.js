@@ -9,12 +9,12 @@ const CRAWL_DELAY_MS = 1500;
 const LINE_DELAY_MS = 2000;
 const MAX_WALK_MIN = 30;
 
-// 사이타마현 + 4개 노선
 const TARGET_LINES = [
-  { name: '埼京線',     slug: 'en_saikyosen',     area: null },  // 全線
-  { name: '京浜東北線', slug: 'en_keihintohokusen' },
-  { name: '副都心線',   slug: 'en_fukutoshinsen', area: null },  // 全線
-  { name: '有楽町線',   slug: 'en_yurakuchosen',  area: null },  // 全線
+  { name: '埼京線',     slug: 'en_saikyosen',      areas: ['saitama', 'tokyo', 'kanagawa'] },
+  { name: '京浜東北線', slug: 'en_keihintohokusen', areas: ['saitama'] },
+  { name: '副都心線',   slug: 'en_fukutoshinsen',   areas: ['tokyo', 'saitama'] },
+  { name: '有楽町線',   slug: 'en_yurakuchosen',    areas: ['tokyo', 'saitama'] },
+  { name: '総武線',    slug: 'en_sobusen',          areas: ['chiba', 'tokyo'] },
 ];
 
 // 중고만
@@ -125,14 +125,12 @@ const getTotalPages = ($) => {
 };
 
 // 한 노선 + 타입 크롤링
-const crawlLineType = async (line, urlType) => {
+const crawlLineArea = async (line, urlType, area) => {
   const { path, type } = urlType;
-  console.log(`\n[${line.name}/${type}] 크롤링 시작`);
   const allItems = [];
 
   const buildUrl = (page) => {
-    const areaSegment = line.area === undefined ? 'saitama/' : (line.area ? `${line.area}/` : '');
-    const base = `${BASE_URL}/${path}/${areaSegment}${line.slug}/`;
+    const base = `${BASE_URL}/${path}/${area}/${line.slug}/`;
     const params = new URLSearchParams({ pc: String(ITEMS_PER_PAGE) });
     if (page > 1) params.set('page', String(page));
     return `${base}?${params.toString()}`;
@@ -144,7 +142,7 @@ const crawlLineType = async (line, urlType) => {
   const totalPages = Math.min(getTotalPages($first), MAX_PAGES);
   const firstItems = parsePage($first, type);
   allItems.push(...firstItems);
-  console.log(`  1/${totalPages}p → ${firstItems.length}건`);
+  console.log(`  [${area}] 1/${totalPages}p → ${firstItems.length}건`);
 
   for (let page = 2; page <= totalPages; page++) {
     await sleep(CRAWL_DELAY_MS);
@@ -152,11 +150,26 @@ const crawlLineType = async (line, urlType) => {
     const $ = cheerio.load(data);
     const items = parsePage($, type);
     allItems.push(...items);
-    console.log(`  ${page}/${totalPages}p → ${items.length}건`);
+    console.log(`  [${area}] ${page}/${totalPages}p → ${items.length}건`);
+  }
+
+  return allItems;
+};
+
+const crawlLineType = async (line, urlType) => {
+  const { type } = urlType;
+  console.log(`\n[${line.name}/${type}] 크롤링 시작 (지역: ${line.areas.join(', ')})`);
+  const allItems = [];
+
+  for (const area of line.areas) {
+    const items = await crawlLineArea(line, urlType, area);
+    allItems.push(...items);
+    await sleep(LINE_DELAY_MS);
   }
 
   console.log(`[${line.name}/${type}] 합계 ${allItems.length}건`);
-  return allItems;
+  // 지역 태깅
+  return allItems.map((item) => ({ ...item, area }));
 };
 
 // DB 저장
@@ -179,21 +192,21 @@ const saveProperties = async (items, lineName) => {
       if (exists.rows.length === 0) {
         await client.query(
           `INSERT INTO properties
-            (name, price, price_num, walk_min, address, transport, land_area, building_area, layout, year_built, line_name, suumo_url, image_url)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+            (name, price, price_num, walk_min, address, transport, land_area, building_area, layout, year_built, line_name, area, suumo_url, image_url)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
           [item.name, item.price, item.price_num, item.walk_min, item.address, item.transport,
            item.land_area, item.building_area, item.layout,
-           item.year_built, lineName, item.suumo_url, item.image_url || null]
+           item.year_built, lineName, item.area || null, item.suumo_url, item.image_url || null]
         );
         saved++;
       } else {
         await client.query(
           `UPDATE properties SET price=$1, price_num=$2, walk_min=$3, address=$4, transport=$5,
-            land_area=$6, building_area=$7, layout=$8, year_built=$9, image_url=$10, updated_at=NOW()
-           WHERE suumo_url=$11`,
+            land_area=$6, building_area=$7, layout=$8, year_built=$9, image_url=$10, area=$11, updated_at=NOW()
+           WHERE suumo_url=$12`,
           [item.price, item.price_num, item.walk_min, item.address, item.transport,
            item.land_area, item.building_area, item.layout,
-           item.year_built, item.image_url || null, item.suumo_url]
+           item.year_built, item.image_url || null, item.area || null, item.suumo_url]
         );
         updated++;
       }

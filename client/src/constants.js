@@ -36,4 +36,12 @@ export const YEAR_OPTIONS = [
   { label: '1998年〜', from: 1998 },
 ];
 
+export const AREA_OPTIONS = [
+  { label: 'すべて',    value: undefined },
+  { label: '東京都',    value: 'tokyo' },
+  { label: '埼玉県',   value: 'saitama' },
+  { label: '神奈川県', value: 'kanagawa' },
+  { label: '千葉県',   value: 'chiba' },
+];
+
 export const PAGE_LIMIT = 20;

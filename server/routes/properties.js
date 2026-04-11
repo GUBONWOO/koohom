@@ -15,7 +15,7 @@ const SORT_MAP = {
 // GET /api/properties
 router.get('/', async (req, res) => {
   try {
-    const { line, page = 1, limit = 20, priceMin, priceMax, yearFrom, yearTo, walkMax, sortBy, skipCount } = req.query;
+    const { line, area, page = 1, limit = 20, priceMin, priceMax, yearFrom, yearTo, walkMax, sortBy, skipCount } = req.query;
     const offset = (page - 1) * limit;
 
     const conditions = [];
@@ -27,6 +27,7 @@ router.get('/', async (req, res) => {
     };
 
     if (line)     push(line,               'line_name = ?');
+    if (area)     push(area,               'area = ?');
     if (priceMin) push(parseInt(priceMin),  'price_num >= ?');
     if (priceMax) push(parseInt(priceMax),  'price_num <= ?');
     if (yearFrom) push(parseInt(yearFrom),  'CAST(year_built AS INTEGER) >= ?');
