@@ -158,7 +158,7 @@ const crawlLineArea = async (line, urlType, area) => {
   const $first = cheerio.load(firstData);
 
   const totalPages = Math.min(getTotalPages($first), MAX_PAGES);
-  const firstItems = parsePage($first, type);
+  const firstItems = parsePage($first, urlType);
   allItems.push(...firstItems);
   console.log(`  [${area}] 1/${totalPages}p → ${firstItems.length}건`);
 
@@ -166,7 +166,7 @@ const crawlLineArea = async (line, urlType, area) => {
     await sleep(CRAWL_DELAY_MS);
     const { data } = await axiosInstance.get(buildUrl(page));
     const $ = cheerio.load(data);
-    const items = parsePage($, type);
+    const items = parsePage($, urlType);
     allItems.push(...items);
     console.log(`  [${area}] ${page}/${totalPages}p → ${items.length}건`);
   }
