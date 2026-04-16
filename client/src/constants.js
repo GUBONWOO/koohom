@@ -36,6 +36,12 @@ export const YEAR_OPTIONS = [
   { label: '1998年〜', from: 1998 },
 ];
 
+export const TYPE_OPTIONS = [
+  { label: 'すべて', value: undefined },
+  { label: '新築',   value: 'shinchiku' },
+  { label: '中古',   value: 'chuko' },
+];
+
 export const AREA_OPTIONS = [
   { label: 'すべて',    value: undefined },
   { label: '東京都',    value: 'tokyo' },

@@ -17,9 +17,9 @@ const TARGET_LINES = [
   { name: '総武線',    slug: 'en_sobusen',          areas: ['chiba', 'tokyo'] },
 ];
 
-// 중고만
 const URL_TYPES = [
-  { type: 'chuko', path: 'chukoikkodate' },  // 中古一戸建て (cn=30: 築30年以内)
+  { type: 'chuko',    path: 'chukoikkodate' },  // 中古一戸建て
+  { type: 'shinchiku', path: 'ikkodate' },       // 新築一戸建て
 ];
 
 const axiosInstance = axios.create({
@@ -126,7 +126,7 @@ const parsePage = ($, urlType) => {
       building_area: bldArea || null,
       layout:        layout || null,
       year_built:    parseYearBuilt(yearText) || null,
-      property_type: urlType,
+      property_type: urlType.type,
       suumo_url:     url || null,
       image_url:     imageUrl,
     });
@@ -218,21 +218,21 @@ const saveProperties = async (items, lineName) => {
       if (exists.rows.length === 0) {
         await client.query(
           `INSERT INTO properties
-            (name, price, price_num, walk_min, address, transport, land_area, building_area, layout, year_built, line_name, area, station, suumo_url, image_url)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
+            (name, price, price_num, walk_min, address, transport, land_area, building_area, layout, year_built, line_name, area, station, property_type, suumo_url, image_url)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
           [item.name, item.price, item.price_num, item.walk_min, item.address, item.transport,
            item.land_area, item.building_area, item.layout,
-           item.year_built, lineName, item.area || null, item.station || null, item.suumo_url, item.image_url || null]
+           item.year_built, lineName, item.area || null, item.station || null, item.property_type || null, item.suumo_url, item.image_url || null]
         );
         saved++;
       } else {
         await client.query(
           `UPDATE properties SET price=$1, price_num=$2, walk_min=$3, address=$4, transport=$5,
-            land_area=$6, building_area=$7, layout=$8, year_built=$9, image_url=$10, area=$11, station=$12, updated_at=NOW()
-           WHERE suumo_url=$13`,
+            land_area=$6, building_area=$7, layout=$8, year_built=$9, image_url=$10, area=$11, station=$12, property_type=$13, updated_at=NOW()
+           WHERE suumo_url=$14`,
           [item.price, item.price_num, item.walk_min, item.address, item.transport,
            item.land_area, item.building_area, item.layout,
-           item.year_built, item.image_url || null, item.area || null, item.station || null, item.suumo_url]
+           item.year_built, item.image_url || null, item.area || null, item.station || null, item.property_type || null, item.suumo_url]
         );
         updated++;
       }
