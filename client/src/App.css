@@ -190,6 +190,10 @@ body {
   overflow: hidden;
   box-shadow: var(--shadow-sm);
   transition: background 0.3s var(--ease);
+  margin-top: 16px;
+}
+.sidebar-section:first-child {
+  margin-top: 0;
 }
 .sidebar-title {
   padding: 14px 16px 12px;

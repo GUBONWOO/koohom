@@ -82,6 +82,7 @@ export default function App() {
   const handlePageChange = (p) => {
     isPageChange.current = true;
     setPage(p);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleFilter = (setter) => (val) => {
