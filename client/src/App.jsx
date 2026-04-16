@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { getProperties, getStats } from './api';
+import { getProperties, getStats, getStations } from './api';
 import PropertyCard from './PropertyCard';
 import FilterBar from './FilterBar';
 import Pagination from './Pagination';
@@ -11,6 +11,8 @@ export default function App() {
   const [properties, setProperties] = useState([]);
   const [stats, setStats]           = useState(null);
   const [selectedLine, setSelectedLine] = useState('');
+  const [selectedStation, setSelectedStation] = useState('');
+  const [stations, setStations] = useState([]);
   const [areaIdx, setAreaIdx]       = useState(0);
   const [priceIdx, setPriceIdx]     = useState(0);
   const [yearIdx, setYearIdx]       = useState(0);
@@ -44,6 +46,7 @@ export default function App() {
       const res = await getProperties({
         line:      selectedLine || undefined,
         area:      area.value,
+        station:   selectedStation || undefined,
         priceMin:  price.min,
         priceMax:  price.max,
         yearFrom:  year.from,
@@ -61,11 +64,16 @@ export default function App() {
     } finally {
       setLoading(false);
     }
-  }, [selectedLine, areaIdx, priceIdx, yearIdx, walkIdx, sortBy, page]);
+  }, [selectedLine, selectedStation, areaIdx, priceIdx, yearIdx, walkIdx, sortBy, page]);
 
   useEffect(() => {
     getStats().then((r) => setStats(r.data)).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    setSelectedStation('');
+    getStations(selectedLine || null).then((r) => setStations(r.data)).catch(() => {});
+  }, [selectedLine]);
 
   useEffect(() => {
     fetchProperties();
@@ -135,6 +143,29 @@ export default function App() {
                     onClick={() => handleFilter(setSelectedLine)(s.line_name)}
                   >
                     <span className="stats-line-name">{s.line_name}</span>
+                    <span className="stats-count">{parseInt(s.count).toLocaleString()}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {stations.length > 0 && (
+            <div className="sidebar-section">
+              <div className="sidebar-title">駅</div>
+              <div className="stats-list">
+                <div
+                  className={`stats-item ${!selectedStation ? 'active' : ''}`}
+                  onClick={() => handleFilter(setSelectedStation)('')}
+                >
+                  <span className="stats-line-name">全駅</span>
+                </div>
+                {stations.map((s) => (
+                  <div
+                    key={s.station}
+                    className={`stats-item ${selectedStation === s.station ? 'active' : ''}`}
+                    onClick={() => handleFilter(setSelectedStation)(s.station)}
+                  >
+                    <span className="stats-line-name">{s.station}</span>
                     <span className="stats-count">{parseInt(s.count).toLocaleString()}</span>
                   </div>
                 ))}

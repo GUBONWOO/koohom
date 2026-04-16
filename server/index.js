@@ -47,6 +47,26 @@ app.get('/api/lines', (_req, res) => {
   res.json(TARGET_LINES.map((l) => l.name));
 });
 
+// GET /api/stations?line=xxx
+app.get('/api/stations', async (req, res) => {
+  try {
+    const { line } = req.query;
+    const where = line ? 'WHERE line_name = $1 AND station IS NOT NULL' : 'WHERE station IS NOT NULL';
+    const params = line ? [line] : [];
+    const { rows } = await pool.query(
+      `SELECT station, COUNT(*) AS count
+       FROM properties
+       ${where}
+       GROUP BY station
+       ORDER BY count DESC`,
+      params
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── 서버 시작 ───────────────────────────────────────────────────
 const PORT = process.env.PORT || 5000;
 

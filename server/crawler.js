@@ -59,6 +59,15 @@ const parseWalkMinForLine = (transport, lineName) => {
   return m ? parseInt(m[1], 10) : Infinity;
 };
 
+// 특정 노선 기준 역명 추출
+const parseStationForLine = (transport, lineName) => {
+  if (!transport) return null;
+  const idx = transport.indexOf(lineName);
+  if (idx === -1) return null;
+  const m = transport.slice(idx).match(/「([^」]+)」/);
+  return m ? m[1] : null;
+};
+
 // "2013年4月" → 연도 숫자 추출
 const parseYearBuilt = (text) => {
   const m = text.match(/(\d{4})\s*年/);
@@ -173,11 +182,12 @@ const crawlLineType = async (line, urlType) => {
   for (const area of line.areas) {
     const items = await crawlLineArea(line, urlType, area);
     allItems.push(...items
-      .filter((item) => item.transport && item.transport.startsWith(line.name))
+      .filter((item) => item.transport && item.transport.split('/')[0].includes(line.name))
       .map((item) => ({
         ...item,
         area,
         walk_min: parseWalkMinForLine(item.transport, line.name),
+        station:  parseStationForLine(item.transport, line.name),
       }))
       .filter((item) => item.walk_min <= MAX_WALK_MIN)
     );
@@ -208,21 +218,21 @@ const saveProperties = async (items, lineName) => {
       if (exists.rows.length === 0) {
         await client.query(
           `INSERT INTO properties
-            (name, price, price_num, walk_min, address, transport, land_area, building_area, layout, year_built, line_name, area, suumo_url, image_url)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
+            (name, price, price_num, walk_min, address, transport, land_area, building_area, layout, year_built, line_name, area, station, suumo_url, image_url)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
           [item.name, item.price, item.price_num, item.walk_min, item.address, item.transport,
            item.land_area, item.building_area, item.layout,
-           item.year_built, lineName, item.area || null, item.suumo_url, item.image_url || null]
+           item.year_built, lineName, item.area || null, item.station || null, item.suumo_url, item.image_url || null]
         );
         saved++;
       } else {
         await client.query(
           `UPDATE properties SET price=$1, price_num=$2, walk_min=$3, address=$4, transport=$5,
-            land_area=$6, building_area=$7, layout=$8, year_built=$9, image_url=$10, area=$11, updated_at=NOW()
-           WHERE suumo_url=$12`,
+            land_area=$6, building_area=$7, layout=$8, year_built=$9, image_url=$10, area=$11, station=$12, updated_at=NOW()
+           WHERE suumo_url=$13`,
           [item.price, item.price_num, item.walk_min, item.address, item.transport,
            item.land_area, item.building_area, item.layout,
-           item.year_built, item.image_url || null, item.area || null, item.suumo_url]
+           item.year_built, item.image_url || null, item.area || null, item.station || null, item.suumo_url]
         );
         updated++;
       }
