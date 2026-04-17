@@ -17,9 +17,7 @@ app.use('/api/properties', propertiesRouter);
 app.get('/api/stats', async (_req, res) => {
   try {
     const { rows } = await pool.query(`
-      SELECT line_name, COUNT(*) AS count,
-             MIN(crawled_at) AS first_crawled,
-             MAX(crawled_at) AS last_crawled
+      SELECT line_name, COUNT(*) AS count
       FROM properties
       GROUP BY line_name
       ORDER BY line_name
@@ -74,12 +72,19 @@ const PORT = process.env.PORT || 5000;
   await initDB();
   app.listen(PORT, () => console.log(`서버 실행 중: http://localhost:${PORT}`));
 
-  // 3시간마다 자동 크롤링
-  cron.schedule('0 */3 * * *', async () => {
-    console.log(`[배치] 크롤링 시작: ${new Date().toISOString()}`);
-    runCrawler(null)
-      .then((summary) => console.log('[배치] 크롤링 완료:', summary))
-      .catch((err) => console.error('[배치] 크롤링 오류:', err.message));
-  });
-  console.log('[배치] 스케줄러 등록 완료 (3시간마다 실행)');
+  // 지역별 로테이션 크롤링 (3시간 간격)
+  const scheduleArea = (cronExpr, areas) => {
+    cron.schedule(cronExpr, () => {
+      console.log(`[배치] 크롤링 시작 (${areas.join(',')}): ${new Date().toISOString()}`);
+      runCrawler(null, areas)
+        .then((s) => console.log(`[배치] 완료 (${areas.join(',')})`, s))
+        .catch((err) => console.error(`[배치] 오류 (${areas.join(',')})`, err.message));
+    });
+  };
+
+  scheduleArea('0 0,9,18 * * *',  ['tokyo']);
+  scheduleArea('0 3,12,21 * * *', ['saitama']);
+  scheduleArea('0 6,15 * * *',    ['kanagawa', 'chiba']);
+
+  console.log('[배치] 스케줄러 등록 완료 (tokyo: 0/9/18시, saitama: 3/12/21시, kanagawa+chiba: 6/15시)');
 })();

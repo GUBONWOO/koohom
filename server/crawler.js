@@ -14,7 +14,9 @@ const TARGET_LINES = [
   { name: '京浜東北線', slug: 'en_keihintohokusen', areas: ['saitama'] },
   { name: '副都心線',   slug: 'en_fukutoshinsen',   areas: ['tokyo', 'saitama'] },
   { name: '有楽町線',   slug: 'en_yurakuchosen',    areas: ['tokyo', 'saitama'] },
-  { name: '総武線',    slug: 'en_sobusen',          areas: ['chiba', 'tokyo'] },
+  { name: '総武線',        slug: 'en_sobusen',          areas: ['chiba', 'tokyo'] },
+  { name: '西武新宿線',   slug: 'en_seibushinjukusen', areas: ['tokyo', 'saitama'] },
+  { name: '西武池袋線',   slug: 'en_seibuikebukurosen', areas: ['tokyo', 'saitama'] },
 ];
 
 const URL_TYPES = [
@@ -259,11 +261,18 @@ const saveProperties = async (items, lineName) => {
   return { saved, updated, deleted };
 };
 
-// 전체 실행
-const runCrawler = async (lineName = null) => {
-  const lines = lineName
+// 전체 실행 (lineName: 특정 노선, targetAreas: 특정 지역만)
+const runCrawler = async (lineName = null, targetAreas = null) => {
+  let lines = lineName
     ? TARGET_LINES.filter((l) => l.name === lineName)
     : TARGET_LINES;
+
+  // targetAreas 지정 시 해당 지역이 포함된 노선만, areas도 해당 지역으로 제한
+  if (targetAreas) {
+    lines = lines
+      .map((l) => ({ ...l, areas: l.areas.filter((a) => targetAreas.includes(a)) }))
+      .filter((l) => l.areas.length > 0);
+  }
 
   const summary = [];
   for (const line of lines) {
@@ -280,7 +289,7 @@ const runCrawler = async (lineName = null) => {
 
     try {
       const result = await saveProperties(allItems, line.name);
-      summary.push({ line: line.name, ...result, total: allItems.length });
+      summary.push({ line: line.name, areas: line.areas, ...result, total: allItems.length });
     } catch (err) {
       console.error(`[${line.name}] DB 저장 오류:`, err.message);
       summary.push({ line: line.name, error: err.message });
