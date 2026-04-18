@@ -19,7 +19,7 @@ export default function App() {
   const [properties, setProperties] = useState([]);
   const [stats, setStats] = useState(null);
   const [selectedLine, setSelectedLine] = useState('');
-  const [selectedStation, setSelectedStation] = useState('');
+  const [selectedStations, setSelectedStations] = useState([]);
   const [stations, setStations] = useState([]);
   const [typeIdx, setTypeIdx] = useState(0);
   const [areaIdx, setAreaIdx] = useState(0);
@@ -60,7 +60,7 @@ export default function App() {
         {
           line: selectedLine || undefined,
           area: area.value,
-          station: selectedStation || undefined,
+          station: selectedStations.length > 0 ? selectedStations.join(',') : undefined,
           propertyType: type.value,
           priceMin: price.min,
           priceMax: price.max,
@@ -83,7 +83,7 @@ export default function App() {
     }
   }, [
     selectedLine,
-    selectedStation,
+    selectedStations,
     typeIdx,
     areaIdx,
     priceIdx,
@@ -100,7 +100,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    setSelectedStation('');
+    setSelectedStations([]);
     getStations(selectedLine || null)
       .then((r) => setStations(r.data))
       .catch(() => {});
@@ -192,16 +192,24 @@ export default function App() {
               <div className='sidebar-title'>駅</div>
               <div className='stats-list'>
                 <div
-                  className={`stats-item ${!selectedStation ? 'active' : ''}`}
-                  onClick={() => handleFilter(setSelectedStation)('')}
+                  className={`stats-item ${selectedStations.length === 0 ? 'active' : ''}`}
+                  onClick={() => { setSelectedStations([]); setPage(1); isPageChange.current = false; }}
                 >
                   <span className='stats-line-name'>全駅</span>
                 </div>
                 {stations.map((s) => (
                   <div
                     key={s.station}
-                    className={`stats-item ${selectedStation === s.station ? 'active' : ''}`}
-                    onClick={() => handleFilter(setSelectedStation)(s.station)}
+                    className={`stats-item ${selectedStations.includes(s.station) ? 'active' : ''}`}
+                    onClick={() => {
+                      setSelectedStations((prev) =>
+                        prev.includes(s.station)
+                          ? prev.filter((x) => x !== s.station)
+                          : [...prev, s.station]
+                      );
+                      setPage(1);
+                      isPageChange.current = false;
+                    }}
                   >
                     <span className='stats-line-name'>{s.station}</span>
                     <span className='stats-count'>

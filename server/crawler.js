@@ -45,13 +45,6 @@ const parsePrice = (text) => {
   return results.length ? Math.min(...results) : null;
 };
 
-// "徒歩15分" 등에서 최솟값 추출
-const parseWalkMin = (text) => {
-  const matches = [...text.matchAll(/徒歩\s*(\d+)\s*分/g)];
-  if (!matches.length) return Infinity;
-  return Math.min(...matches.map((m) => parseInt(m[1], 10)));
-};
-
 // 특정 노선 기준 도보 시간 추출
 const parseWalkMinForLine = (transport, lineName) => {
   if (!transport) return Infinity;
@@ -104,9 +97,6 @@ const parsePage = ($, urlType) => {
     const priceNum = parsePrice(price || '');
     if (!priceNum) return;
 
-    // 도보 MAX_WALK_MIN분 이내 필터
-    if (parseWalkMin(transport) > MAX_WALK_MIN) return;
-
     const href = $(unit).find('a[href*="ikkodate"], a[href*="chukoikkodate"]').first().attr('href') || '';
     const url  = href.startsWith('http') ? href : BASE_URL + href;
 
@@ -121,7 +111,6 @@ const parsePage = ($, urlType) => {
       name:          name || null,
       price,
       price_num:     priceNum,
-      walk_min:      parseWalkMin(transport),
       address:       address || null,
       transport:     transport || null,
       land_area:     landArea || null,
@@ -200,8 +189,8 @@ const crawlLineType = async (line, urlType) => {
   return allItems;
 };
 
-// DB 저장
-const saveProperties = async (items, lineName) => {
+// DB 저장 (crawledAreas: 이번에 크롤링한 지역 목록)
+const saveProperties = async (items, lineName, crawledAreas = null) => {
   const client = await pool.connect();
   let saved = 0;
   let updated = 0;
@@ -212,41 +201,40 @@ const saveProperties = async (items, lineName) => {
     for (const item of items) {
       if (!item.suumo_url) continue;
 
-      const exists = await client.query(
-        'SELECT id FROM properties WHERE suumo_url = $1',
-        [item.suumo_url]
+      const result = await client.query(
+        `INSERT INTO properties
+          (name, price, price_num, walk_min, address, transport, land_area, building_area, layout, year_built, line_name, area, station, property_type, suumo_url, image_url)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+         ON CONFLICT (suumo_url) DO UPDATE SET
+          price=$2, price_num=$3, walk_min=$4, address=$5, transport=$6,
+          land_area=$7, building_area=$8, layout=$9, year_built=$10,
+          image_url=$16, area=$12, station=$13, property_type=$14, updated_at=NOW()
+         RETURNING (xmax = 0) AS inserted`,
+        [item.name, item.price, item.price_num, item.walk_min, item.address, item.transport,
+         item.land_area, item.building_area, item.layout,
+         item.year_built, lineName, item.area || null, item.station || null, item.property_type || null, item.suumo_url, item.image_url || null]
       );
 
-      if (exists.rows.length === 0) {
-        await client.query(
-          `INSERT INTO properties
-            (name, price, price_num, walk_min, address, transport, land_area, building_area, layout, year_built, line_name, area, station, property_type, suumo_url, image_url)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
-          [item.name, item.price, item.price_num, item.walk_min, item.address, item.transport,
-           item.land_area, item.building_area, item.layout,
-           item.year_built, lineName, item.area || null, item.station || null, item.property_type || null, item.suumo_url, item.image_url || null]
-        );
-        saved++;
-      } else {
-        await client.query(
-          `UPDATE properties SET price=$1, price_num=$2, walk_min=$3, address=$4, transport=$5,
-            land_area=$6, building_area=$7, layout=$8, year_built=$9, image_url=$10, area=$11, station=$12, property_type=$13, updated_at=NOW()
-           WHERE suumo_url=$14`,
-          [item.price, item.price_num, item.walk_min, item.address, item.transport,
-           item.land_area, item.building_area, item.layout,
-           item.year_built, item.image_url || null, item.area || null, item.station || null, item.property_type || null, item.suumo_url]
-        );
-        updated++;
-      }
+      if (result.rows[0].inserted) saved++;
+      else updated++;
     }
-    // 이번 크롤링에 없는 매물 삭제
+    // 이번 크롤링에 없는 매물 삭제 (크롤링한 지역 범위 내에서만)
     const crawledUrls = items.map((i) => i.suumo_url).filter(Boolean);
     if (crawledUrls.length > 0) {
-      const placeholders = crawledUrls.map((_, i) => `$${i + 2}`).join(',');
-      const result = await client.query(
-        `DELETE FROM properties WHERE line_name = $1 AND suumo_url NOT IN (${placeholders})`,
-        [lineName, ...crawledUrls]
-      );
+      const urlPlaceholders = crawledUrls.map((_, i) => `$${i + 2}`).join(',');
+      let deleteQuery;
+      let deleteParams;
+
+      if (crawledAreas && crawledAreas.length > 0) {
+        const areaPlaceholders = crawledAreas.map((_, i) => `$${crawledUrls.length + 2 + i}`).join(',');
+        deleteQuery = `DELETE FROM properties WHERE line_name = $1 AND area IN (${areaPlaceholders}) AND suumo_url NOT IN (${urlPlaceholders})`;
+        deleteParams = [lineName, ...crawledUrls, ...crawledAreas];
+      } else {
+        deleteQuery = `DELETE FROM properties WHERE line_name = $1 AND suumo_url NOT IN (${urlPlaceholders})`;
+        deleteParams = [lineName, ...crawledUrls];
+      }
+
+      const result = await client.query(deleteQuery, deleteParams);
       deleted = result.rowCount;
     }
 
@@ -288,7 +276,7 @@ const runCrawler = async (lineName = null, targetAreas = null) => {
     }
 
     try {
-      const result = await saveProperties(allItems, line.name);
+      const result = await saveProperties(allItems, line.name, line.areas);
       summary.push({ line: line.name, areas: line.areas, ...result, total: allItems.length });
     } catch (err) {
       console.error(`[${line.name}] DB 저장 오류:`, err.message);

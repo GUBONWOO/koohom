@@ -15,7 +15,7 @@ const SORT_MAP = {
 // GET /api/properties
 router.get('/', async (req, res) => {
   try {
-    const { line, area, station, propertyType, page = 1, limit = 20, priceMin, priceMax, yearFrom, yearTo, walkMax, sortBy, skipCount } = req.query;
+    const { line, area, station, propertyType, page = 1, limit = 20, priceMin, priceMax, yearFrom, walkMax, sortBy, skipCount } = req.query;
     const offset = (page - 1) * limit;
 
     const conditions = [];
@@ -28,12 +28,15 @@ router.get('/', async (req, res) => {
 
     if (line)     push(line,               'line_name = ?');
     if (area)     push(area,               'area = ?');
-    if (station)      push(station,       'station = ?');
+    if (station) {
+      const list = station.split(',').map((s) => s.trim()).filter(Boolean);
+      if (list.length === 1) push(list[0], 'station = ?');
+      else { params.push(list); conditions.push(`station = ANY($${params.length})`); }
+    }
     if (propertyType) push(propertyType,  'property_type = ?');
     if (priceMin) push(parseInt(priceMin),  'price_num >= ?');
     if (priceMax) push(parseInt(priceMax),  'price_num <= ?');
     if (yearFrom) push(parseInt(yearFrom),  'CAST(year_built AS INTEGER) >= ?');
-    if (yearTo)   push(parseInt(yearTo),    'CAST(year_built AS INTEGER) <= ?');
     if (walkMax)  push(parseInt(walkMax),   'walk_min <= ?');
 
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
