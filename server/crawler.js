@@ -176,7 +176,11 @@ const crawlLineType = async (line, urlType) => {
       .filter((item) => item.transport && item.transport.split('/')[0].includes(line.name))
       .map((item) => ({
         ...item,
-        area,
+        area: /埼玉県/.test(item.address) ? 'saitama'
+            : /東京都/.test(item.address) ? 'tokyo'
+            : /神奈川県/.test(item.address) ? 'kanagawa'
+            : /千葉県/.test(item.address) ? 'chiba'
+            : area,
         walk_min: parseWalkMinForLine(item.transport, line.name),
         station:  parseStationForLine(item.transport, line.name),
       }))
